@@ -5,7 +5,7 @@ A visual, bilingual (English + 中文) guide to the **internals of
 platform** — that takes you from *"what is LLM observability"* all the way to *"how the ingestion /
 query paths work in the code"* and *"how to build, test and contribute a PR"*.
 
-**📖 Read it online: <https://verdenmax.github.io/langfuse-visual-guide/>**
+**📖 Read it online: <https://liyang-chen-ucla.github.io/langfuse-visual-guide/>**
 
 > **Disclaimer:** This is **third-party, unofficial** educational material *about* Langfuse. It contains
 > **no Langfuse source code** beyond small, cited snippets; it explains Langfuse by quoting short,
@@ -108,7 +108,7 @@ Dual-licensed:
 这是一份 [Langfuse](https://github.com/langfuse/langfuse) 内部原理的**图解、双语**学习指南，从
 "什么是 LLM 可观测性"一路讲到"摄取/查询链路在代码里怎么走"以及"怎么本地构建、测试、提一个 PR"。
 
-**📖 在线阅读：<https://verdenmax.github.io/langfuse-visual-guide/>**
+**📖 在线阅读：<https://liyang-chen-ucla.github.io/langfuse-visual-guide/>**
 
 > **声明：** 本项目是**第三方、非官方**的学习材料，**不包含 Langfuse 源码**（仅引用少量、标注来源的
 > 代码片段来讲解）。Langfuse 本身由其作者以 **MIT** 许可发布（部分企业版功能除外）。
