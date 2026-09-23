@@ -34,7 +34,7 @@ import quizzes  # noqa: E402
 PAGES = shell.PAGES
 ORDER = [p[0] for p in PAGES]
 TOTAL = len(PAGES)
-MAX_LESSON = 55  # planned final lesson count (incl. Part 11 capstone); cross-refs may point forward
+MAX_LESSON = 61  # planned final lesson count (incl. Part 11 capstone); cross-refs may point forward
 MIN_CONTENT = 80  # min chars of zh/en source content per lesson (catch empty translations)
 
 PRE_INLINE = ("span", "strong", "b", "em", "u", "a")
