@@ -344,7 +344,7 @@ details[open] > summary { list-style: none; }
 </head>
 <body>
 <h1>Langfuse 图解学习指南 - 打印版</h1>
-<p style="color:var(--muted)">全 55 课 - 逐课分页。用浏览器 Ctrl/Cmd+P 即可导出 PDF。</p>
+<p style="color:var(--muted)">全 61 课 - 逐课分页。用浏览器 Ctrl/Cmd+P 即可导出 PDF。</p>
 <div class="print-toc"><h2>目录</h2>
 <ol>
   <li>Langfuse 是什么</li>
@@ -402,6 +402,12 @@ details[open] > summary { list-style: none; }
   <li>构建·测试·开发流</li>
   <li>设计专题综合</li>
   <li>终章·一条 trace 的完整一生</li>
+  <li>v4 架构总览：从 v3.199 到 v4.42</li>
+  <li>v4 统一 events 数据模型</li>
+  <li>Python SDK v4：OTel 原生埋点</li>
+  <li>Agent / LangChain v4 实战</li>
+  <li>v4 实时查询与评估闭环</li>
+  <li>自托管 v4 迁移与上线</li>
 </ol></div>
 <section class="lesson-print">
 <h1>Langfuse 是什么</h1>
@@ -13489,7 +13495,7 @@ Langfuse 是一个<strong>帮你观测 LLM 应用</strong>的工具。那它自�
 </div>
 
 <div class="card key">
-  <div class="tag">🎯 本课要点 · 全书终</div>
+  <div class="tag">🎯 本课要点 · 第十一部分收官</div>
   <ul>
     <li><strong>一条 trace 的七个驿站</strong>：出生(L12)→摄取(L13-19,L49)→落库(L13)→被读(L20-27)→被评估(L28-36)→被作用(L44-47)→退场(L52)。每课学的零件，在这条流水线上严丝合缝地咬合。</li>
     <li><strong>三条贯穿全程的隐线</strong>：自观测(L51 dogfooding)、plan/entitlement 门控(L50)、projectId 多租户隔离(全栈)——七驿站串骨架，三隐线织底色。</li>
@@ -13544,6 +13550,353 @@ Langfuse 是一个<strong>帮你观测 LLM 应用</strong>的工具。那它自�
   <div class="tag">💭 发散思考（没有标准答案，动手或动脑想想）</div>
   <ul>
     <li>这是全书的最后一道思考题。回望这条 trace 的一生——出生、摄取、落库、被读、被评估、被作用、退场——它回答的大问题是「把 AI 应用的不可观测，变回可观测」。请你合上这本指南，试着不看答案、用自己的话讲一遍：一条 trace 从你的应用出发，到最终被删除，完整经历了哪些环节？每个环节背后是哪条设计主题在起作用？如果让你给一个朋友用三分钟讲清「Langfuse 到底是怎么工作的、为什么这么设计」，你会怎么讲？（这道题没有标准答案——能讲清楚，就说明这 55 课真的内化成了你的东西。）</li>
+  </ul>
+</div>
+</div>
+</section>
+<section class="lesson-print">
+<h1>v4 架构总览：从 v3.199 到 v4.42</h1>
+<div class="card prereq"><div class="tag">🧭 <span class="lang-zh">读前</span><span class="lang-en">Before you start</span></div><div class="lang-zh">先读 <a class="xref" href="55-capstone-trace-life.html">第55课</a> 串起 v3.199.0 的完整全景，本部分再专门补 v4 架构差异与迁移。</div><div class="lang-en">Read <a class="xref" href="55-capstone-trace-life.html">Lesson 55</a> to connect the v3.199.0 architecture first; Part 12 then focuses on the v4 delta and migration.</div></div>
+<p class="lead">原版教程的源码基线是 <strong>Langfuse Server v3.199.0</strong>。到本补充编写时，主仓库已经是 <strong>v4.42.0</strong>。v4 不是“把几个 API 改名”这么简单：它把<strong>数据模型、摄取协议、SDK 上下文模型和查询入口</strong>一起往 OpenTelemetry（OTel）和 observation-first 方向收拢。</p>
+<div class="card analogy"><div class="tag">📋 生活类比</div>v3 像一家快递公司：先建“订单表（trace）”，再把每个运输节点放进“轨迹表（observation）”，查询时经常要把两边拼起来。v4 更像把每个运输节点都做成一张<strong>自带订单关键信息的宽事件</strong>，根节点就是整单的代表。这样写入更统一，查询也少做 JOIN。</div>
+<h2>先抓住六个真正的变化</h2>
+<table class="t"><thead><tr><th>维度</th><th>v3 教程基线</th><th>v4.42 的方向</th></tr></thead><tbody>
+<tr><td>核心实体</td><td>trace + observations 分开理解</td><td><strong>observation-first</strong>；trace 由 root observation 表达</td></tr>
+<tr><td>ClickHouse</td><td>traces / observations 等表并存</td><td><code>events_full</code> / <code>events_core</code> 统一事件读模型</td></tr>
+<tr><td>埋点</td><td>Langfuse 自有事件模型为主，OTel 是并行入口</td><td><strong>OTel 原生</strong>成为 SDK 与摄取主线</td></tr>
+<tr><td>Python SDK</td><td>stateful trace/span/generation client</td><td><code>get_client()</code> + 当前 OTel span/context</td></tr>
+<tr><td>读取</td><td>legacy trace/metrics API</td><td>Observations API v2 / Metrics API v2 / Scores API v3</td></tr>
+<tr><td>升级</td><td>单一旧数据模型</td><td><code>legacy → dual → events_only</code> 分阶段迁移</td></tr>
+</tbody></table>
+<div class="flow"><div class="node"><div class="nt">v3</div><div class="nd">trace 是显式顶层实体</div></div><div class="arrow">→</div><div class="node hl"><div class="nt">v4</div><div class="nd">root observation 代表一次应用调用</div></div><div class="arrow">→</div><div class="node"><div class="nt">统一查询</div><div class="nd">events 表承担主要分析</div></div></div>
+<h2>哪些东西没有变？</h2>
+<p>v4 没有推翻 Langfuse 的基本世界观：仍然是 <strong>web + worker</strong> 两个应用层，仍然用 PostgreSQL 保存事务型配置/元数据，用 ClickHouse 扛遥测分析，用 Redis 做队列/缓存，用 S3/MinIO 保存 blob、媒体与部分异步载荷。真正变化的是<strong>“遥测数据怎样表示和流动”</strong>。</p>
+<div class="cols"><div class="col"><h4>控制面仍然稳定</h4><p>project、prompt、dataset、API key、配置等仍然适合 PostgreSQL。</p></div><div class="col"><h4>数据面被重做</h4><p>trace/observation 的分析模型统一为 events，SDK 也对齐 OTel span/context。</p></div></div>
+<h2>为什么这次升级值得单独学？</h2>
+<p>因为它解决的是规模问题，而不是语法问题。v3 时代为了展示一条 trace，经常需要跨 trace/observation 表拼装；v4 让常用 trace 属性直接跟 observation 一起进入宽事件。代价是行更宽、冗余更多，但换来更直接的过滤、聚合和全文检索。</p>
+<div class="card detail"><div class="tag">🔎 源码锚点</div>
+<ul><li>Server 版本：根目录 <code>package.json</code> = <strong>4.42.0</strong>（本补充 pin 到 commit <code>11fe5cca...</code>）。</li>
+<li>统一事件表：<code>packages/shared/clickhouse/migrations/canonical/0039_create_events_full.up.sql</code>。</li>
+<li>核心读取：<code>packages/shared/src/server/repositories/events.ts</code>。</li>
+<li>Python SDK：<code>langfuse/langfuse-python</code> v4.15.4（pin 到 commit <code>65392c73...</code>）。</li></ul></div>
+<div class="card key"><div class="tag">🎯 本课要点</div><ul>
+<li>v4 的主线是 <strong>observation-first + unified events + OTel-native</strong>。</li>
+<li>trace 没消失，而是从“独立顶层记录”变成由根 observation 表达的一次调用。</li>
+<li>基础设施角色基本没变；变化集中在遥测数据模型、SDK/摄取和查询 API。</li>
+</ul></div>
+<div class="selftest">
+<h2>🧪 自测 · 想一想为什么这么设计</h2>
+<div class="quiz">
+  <div class="qn">1. Langfuse v4 最核心的架构变化是什么？</div>
+  <ol class="opts">
+    <li>把所有数据都搬到 PostgreSQL</li>
+    <li>observation-first + unified events + OTel-native</li>
+    <li>取消 worker，只保留 web</li>
+  </ol>
+  <details class="accordion" open>
+    <summary>看答案与解析 <span class="hint">点击展开</span></summary>
+    <div class="acc-body"><div class="qa"><div class="a"><strong>答案：B</strong>。v4 的主线是 observation-first、统一 events 读模型和 OTel 原生 SDK/摄取；基础设施角色并没有被整体推翻。</div></div></div>
+  </details>
+</div>
+<div class="card spark">
+  <div class="tag">💭 发散思考（没有标准答案，动手或动脑想想）</div>
+  <ul>
+    <li>为什么说 v4 是数据模型迁移，而不只是 API 改名？</li>
+  </ul>
+</div>
+</div>
+</section>
+<section class="lesson-print">
+<h1>v4 统一 events 数据模型</h1>
+<div class="card prereq"><div class="tag">🧭 <span class="lang-zh">读前</span><span class="lang-en">Before you start</span></div><div class="lang-zh">先读 <a class="xref" href="56-v4-architecture-delta.html">第56课</a> 的 v4 总览，本课深入统一 events 与 root observation。</div><div class="lang-en">Read <a class="xref" href="56-v4-architecture-delta.html">Lesson 56</a> for the v4 overview; this lesson dives into unified events and root observations.</div></div>
+<p class="lead">v4 最重要的服务端变化，是把分析主线收敛到统一的 <strong>events</strong> 模型。先别把 <code>events_full</code> 理解成“又一张新表”；它更像是 v4 的<strong>统一事实表</strong>：一个 observation 的身份、trace 上下文、模型、token、成本、输入输出、metadata、工具调用和 instrumentation 来源，都尽量在同一行里。</p>
+<div class="card analogy"><div class="tag">📋 生活类比</div>传统关系库喜欢“学生表、课程表、成绩表”各放各的，再 JOIN。分析系统面对亿级事件时更愿意把常用维度直接抄到“成绩事件”这一行。多存一点，换来查询时少拼表。<strong>events_full 就是这种面向分析的反范式化。</strong></div>
+<h2>events_full 一行里有什么？</h2>
+<table class="t"><thead><tr><th>字段组</th><th>例子</th><th>为什么重要</th></tr></thead><tbody>
+<tr><td>身份/树</td><td><code>trace_id</code>, <code>span_id</code>, <code>parent_span_id</code></td><td>不用额外树表就能重建调用结构</td></tr>
+<tr><td>trace 上下文</td><td><code>trace_name</code>, user/session/tags</td><td>把高频过滤维度放到 event 行</td></tr>
+<tr><td>类型</td><td><code>type</code>, <code>is_app_root</code></td><td>区分 generation/tool/agent 等，同时标出根 observation</td></tr>
+<tr><td>LLM</td><td>model、usage、cost、prompt</td><td>直接做模型/成本/Prompt 维度聚合</td></tr>
+<tr><td>I/O 与工具</td><td>input/output、tool calls</td><td>调试与全文检索</td></tr>
+<tr><td>OTel 来源</td><td>service/scope/sdk name/version</td><td>把标准遥测来源保留下来</td></tr>
+</tbody></table>
+<div class="layers">
+<div class="layer l-core"><div class="lh"><span class="badge">root</span><span class="name">is_app_root = true</span></div><div class="ld">代表一次应用调用的根 observation；它承担过去“trace 顶层记录”的大部分语义。</div></div>
+<div class="layer l-main"><div class="lh"><span class="badge">child</span><span class="name">parent_span_id</span></div><div class="ld">每个子 observation 只需指向父 span；乱序写入也能在读时拼树。</div></div>
+<div class="layer l-part"><div class="lh"><span class="badge">analytics</span><span class="name">wide columns</span></div><div class="ld">user/session/tags/model/cost 等常用维度直接在行上，避免热点 JOIN。</div></div>
+</div>
+<h2>为什么还有 events_core？</h2>
+<p><code>events_full</code> 是“信息最全”的读模型，但并不是每个列表/聚合都需要大字段。v4 同时保留更轻量的 core 视图/表来服务不需要完整 I/O 的查询。思路和原教程第24课的“紧凑列表 vs 详情懒加载”一致：<strong>先少扫，再按需拿重字段。</strong></p>
+<h2>ReplacingMergeTree 仍然重要</h2>
+<p>当前 <code>events_full</code> 使用 <code>ReplacingMergeTree(event_ts, is_deleted)</code>，按 project、时间和 trace hash 排序。它允许同一个事件随着补全/更新继续追加版本，再由读取语义收敛到最新状态。这延续了原教程第8课的核心思想：高吞吐遥测里，尽量把“更新”变成<strong>追加 + 合并</strong>。</p>
+<div class="card warn"><div class="tag">⚠️ 取舍</div><strong>反范式化不是免费午餐。</strong> user/session/tags 等字段在多条 observation 上重复，会增加存储与写入字节；但它换来的是热点查询少 JOIN、列裁剪更直接，以及更容易做全文索引。对可观测平台来说，这通常是值得的交换。</div>
+<div class="card detail"><div class="tag">🔎 源码锚点</div><code>0039_create_events_full.up.sql</code> 直接定义了字段、全文索引、<code>ReplacingMergeTree</code>、月分区和排序键；<code>repositories/events.ts</code> 则展示 v4 如何围绕统一 events 构建 trace/observation 的读取。</div>
+<div class="card key"><div class="tag">🎯 本课要点</div><ul>
+<li>v4 的 trace/observation 分析核心是一张<strong>统一宽事件</strong>，不是简单把旧表换名字。</li>
+<li><code>trace_id + span_id + parent_span_id + is_app_root</code> 足以表达一次应用调用和树结构。</li>
+<li><code>events_full</code> 追求完整，轻量读取则尽量走 core/裁剪字段，避免扫描巨大 I/O。</li>
+</ul></div>
+<div class="selftest">
+<h2>🧪 自测 · 想一想为什么这么设计</h2>
+<div class="quiz">
+  <div class="qn">1. 为什么 <code>events_full</code> 会重复保存 user/session/tags 等 trace 维度？</div>
+  <ol class="opts">
+    <li>为了减少热点分析查询中的 JOIN</li>
+    <li>为了让 PostgreSQL 更小</li>
+    <li>因为 ClickHouse 不支持 JOIN</li>
+  </ol>
+  <details class="accordion" open>
+    <summary>看答案与解析 <span class="hint">点击展开</span></summary>
+    <div class="acc-body"><div class="qa"><div class="a"><strong>答案：A</strong>。这是面向分析的反范式化：多存一些字节，换取列裁剪、过滤、聚合和全文检索更直接。</div></div></div>
+  </details>
+</div>
+<div class="card spark">
+  <div class="tag">💭 发散思考（没有标准答案，动手或动脑想想）</div>
+  <ul>
+    <li>如果一条 observation 的 input/output 很大，为什么列表查询不应该总扫 <code>events_full</code> 的全部列？</li>
+  </ul>
+</div>
+</div>
+</section>
+<section class="lesson-print">
+<h1>Python SDK v4：OTel 原生埋点</h1>
+<div class="card prereq"><div class="tag">🧭 <span class="lang-zh">读前</span><span class="lang-en">Before you start</span></div><div class="lang-zh">先读 <a class="xref" href="56-v4-architecture-delta.html">第56课</a> 与 <a class="xref" href="18-opentelemetry-ingestion.html">第18课</a>，本课把 OTel 从服务端入口延伸到 Python SDK v4。</div><div class="lang-en">Read <a class="xref" href="56-v4-architecture-delta.html">Lesson 56</a> and <a class="xref" href="18-opentelemetry-ingestion.html">Lesson 18</a>; this lesson extends OTel from server ingestion into the Python SDK v4.</div></div>
+<p class="lead">Python SDK v4 在 2026 年重写为 <strong>OpenTelemetry 原生 SDK</strong>。最关键的心智变化是：你不再手工维护一个“Langfuse trace 对象”，而是让<strong>当前 OTel context/span</strong>决定父子关系；Langfuse 在这个标准上下文之上增加 generation、agent、tool 等语义。</p>
+<div class="card analogy"><div class="tag">📋 生活类比</div>v3 像你自己拿一本族谱，创建每个人时手动告诉系统“这个人爸爸是谁”。v4 更像线程里已经有一个“当前家庭上下文”：进入一个 span，它自动成为当前节点；里面再开的 observation 自然就是它的孩子。</div>
+<h2>代码风格怎么变？</h2>
+<div class="cols"><div class="col"><h4>旧式思路</h4><pre class="code">langfuse = Langfuse()
+trace = langfuse.trace(name="request")
+span = trace.span(name="retrieve")
+generation = trace.generation(name="answer")</pre></div>
+<div class="col"><h4>v4 思路</h4><pre class="code">from langfuse import get_client, observe
+
+langfuse = get_client()
+
+@observe()
+def run():
+    with langfuse.start_as_current_observation(
+        as_type="generation",
+        name="answer"
+    ) as gen:
+        ...
+        gen.update(output="done")</pre></div></div>
+<p><code>get_client()</code> 拿到客户端；<code>@observe()</code> 自动把函数边界变成 observation；<code>start_as_current_observation()</code> 适合你需要显式控制类型和生命周期的地方；<code>update_current_span()</code> 用来给当前 span 补 input/output/metadata 等属性。</p>
+<h2>OTel 原生意味着什么？</h2>
+<div class="flow"><div class="node"><div class="nt">App / LangChain</div><div class="nd">产生 span/context</div></div><div class="arrow">→</div><div class="node hl"><div class="nt">OTLP</div><div class="nd">标准 trace 载荷</div></div><div class="arrow">→</div><div class="node"><div class="nt">Langfuse</div><div class="nd">映射为 events</div></div></div>
+<p>这使 Langfuse 能和其它 OTel instrumentation 共存：HTTP、数据库、队列、LLM 都可以在一棵标准 trace 树里。对平台迁移而言，这比“换一个 decorator 名字”重要得多，因为<strong>上下文传播的责任从专用 client 对象转向 OTel context</strong>。</p>
+<h2>两个很实用的坑</h2>
+<div class="card warn"><div class="tag">⚠️ 实战</div><ul>
+<li><strong>先加载环境变量，再 <code>get_client()</code>。</strong> 第三方 v4 实战中最常见的“为什么没上报/401”之一，就是初始化顺序错了。</li>
+<li><strong>短生命周期脚本最后 <code>flush()</code>。</strong> SDK 会批量异步上报；进程太快退出时，不 flush 可能让最后一批 span 还没发出去。</li>
+</ul></div>
+<h2>实时链路也变了</h2>
+<p>当前 Python SDK README 明确把 v4 OTel 摄取 + Observations API v2 / Metrics API v2 作为实时路径。也就是说“写入走新 events，但读取还走旧 trace API”会造成你误以为数据没到；<strong>producer 和 reader 要一起迁移。</strong></p>
+<div class="card detail"><div class="tag">🔎 源码锚点</div>
+<ul><li><code>langfuse-python/pyproject.toml</code>：v4.15.4，直接依赖 OTel API/SDK/OTLP exporter。</li>
+<li><code>langfuse/_client/client.py</code>：<code>start_as_current_observation</code>、<code>update_current_span</code> 等核心入口。</li>
+<li><code>langfuse/_client/observe.py</code>：<code>@observe</code> 如何围绕当前 context 创建 observation。</li></ul></div>
+<div class="card key"><div class="tag">🎯 本课要点</div><ul>
+<li>v4 Python SDK 的核心不再是 trace object，而是<strong>当前 OTel span/context</strong>。</li>
+<li><code>@observe</code> 管函数边界，<code>start_as_current_observation</code> 管显式 observation，<code>update_current_span</code> 补属性。</li>
+<li>初始化顺序与 <code>flush()</code> 是小事，但非常容易造成“平台上看不到 trace”的假故障。</li>
+</ul></div>
+<div class="selftest">
+<h2>🧪 自测 · 想一想为什么这么设计</h2>
+<div class="quiz">
+  <div class="qn">1. Python SDK v4 中父子 observation 关系主要由什么决定？</div>
+  <ol class="opts">
+    <li>一个手工维护的全局 trace_id 列表</li>
+    <li>当前 OTel span/context</li>
+    <li>PostgreSQL 外键</li>
+  </ol>
+  <details class="accordion" open>
+    <summary>看答案与解析 <span class="hint">点击展开</span></summary>
+    <div class="acc-body"><div class="qa"><div class="a"><strong>答案：B</strong>。v4 SDK 基于 OpenTelemetry context 建树；<code>@observe</code> 和 <code>start_as_current_observation</code> 都利用当前上下文。</div></div></div>
+  </details>
+</div>
+<div class="card spark">
+  <div class="tag">💭 发散思考（没有标准答案，动手或动脑想想）</div>
+  <ul>
+    <li>为什么短生命周期脚本通常要显式 <code>flush()</code>？</li>
+  </ul>
+</div>
+</div>
+</section>
+<section class="lesson-print">
+<h1>Agent / LangChain v4 实战</h1>
+<div class="card prereq"><div class="tag">🧭 <span class="lang-zh">读前</span><span class="lang-en">Before you start</span></div><div class="lang-zh">先读 <a class="xref" href="58-python-sdk-v4-otel.html">第58课</a> 的 OTel context，本课再讲 LangChain/Agent 的观测边界与上下文传播。</div><div class="lang-en">Read <a class="xref" href="58-python-sdk-v4-otel.html">Lesson 58</a> on OTel context; this lesson applies it to LangChain/Agent boundaries and propagation.</div></div>
+<p class="lead">复杂 Agent 接 Langfuse v4，最容易犯的错是“每一层都自己手工造 span”。正确思路是先决定<strong>观测边界</strong>：谁代表一次用户请求，谁代表 Agent 决策，谁代表 tool/retriever，谁才是真正的 generation。然后让 LangChain callback、<code>@observe</code> 和手工 observation 各管自己最擅长的边界。</p>
+<div class="card analogy"><div class="tag">📋 生活类比</div>监控一家餐厅，不需要给“拿起勺子、走两步、打开冰箱”都装摄像头。真正有价值的是：一桌订单、厨师决策、取原料、烹饪、上菜。Agent tracing 也是一样：<strong>边界比数量重要。</strong></div>
+<h2>推荐的 Agent 观测树</h2>
+<div class="layers">
+<div class="layer l-core"><div class="lh"><span class="badge">root</span><span class="name">request / agent run</span></div><div class="ld">一次用户任务；在这里挂 user_id、session_id、tags、release/version。</div></div>
+<div class="layer l-main"><div class="lh"><span class="badge">agent</span><span class="name">planner / supervisor</span></div><div class="ld">一次真正改变流程的 LLM 决策；保留选择了哪个工具/子 Agent。</div></div>
+<div class="layer l-part"><div class="lh"><span class="badge">tool</span><span class="name">search / retriever / API</span></div><div class="ld">外部 I/O；记录参数、结果摘要、耗时和失败。</div></div>
+<div class="layer l-app"><div class="lh"><span class="badge">generation</span><span class="name">model call</span></div><div class="ld">模型、prompt、token、成本与输出；这是成本/质量分析的关键单位。</div></div>
+</div>
+<h2>LangChain CallbackHandler 能覆盖什么？</h2>
+<p>v4 Python SDK 仍提供 <code>langfuse.langchain.CallbackHandler</code>。LangChain/LangGraph 自己会发出 model、chain、tool、retriever 等 callback 事件，handler 把这些事件转换成 Langfuse/OTel observation。对“框架内发生的调用”非常省事。</p>
+<div class="cols"><div class="col"><h4>Callback 适合</h4><ul><li>标准 LangChain model/tool/retriever</li><li>create_agent / LangGraph 内部链路</li><li>自动保持大部分父子关系</li></ul></div>
+<div class="col"><h4>手工 observe 适合</h4><ul><li>业务层 supervisor / route 逻辑</li><li>非 LangChain 的 HTTP/DB/自研工具</li><li>需要明确类型、input/output、业务 metadata</li></ul></div></div>
+<h2>不要把“LangGraph State”误当成 trace 自动保存</h2>
+<p>Callback 能观测<strong>发生了哪些调用</strong>，但不会自动把整个 LangGraph State 在每一步完整快照下来。State 是应用运行时状态；trace 是观测记录。若一个 state 字段对 debug 很重要，应在合适的 observation 上<strong>显式记录摘要或关键字段</strong>，而不是期待平台从 reducer/return value 猜出全部状态。</p>
+<h2>跨层共享属性：用 context 传播</h2>
+<p>v4 SDK 提供 <code>propagate_attributes</code> 一类机制，把 user/session/tags 等属性放进当前上下文，使下面创建的 observations 一致继承。这样不用每个 tool call 重复传一遍。</p>
+<pre class="code">from langfuse import get_client, propagate_attributes
+
+lf = get_client()
+
+with propagate_attributes(
+    user_id="u-123",
+    session_id="s-456",
+    tags=["prod", "shop-agent"]
+):
+    agent.invoke(...)</pre>
+<div class="card warn"><div class="tag">⚠️ 实战边界</div>异步 task 通常能沿 contextvars/OTel context 传播，但<strong>线程池、进程池、消息队列</strong>是天然边界。跨这些边界时要验证 trace context 是否被显式注入/提取；否则最常见的症状就是“子 span 飘成了新的 root”。</div>
+<h2>面试里真正能证明你做过的点</h2>
+<table class="t"><thead><tr><th>问题</th><th>有经验的回答</th></tr></thead><tbody>
+<tr><td>为什么不全用 callback？</td><td>callback 覆盖框架事件，但业务状态/自研 I/O/关键边界仍需要手工 observation。</td></tr>
+<tr><td>为什么不每个函数都 @observe？</td><td>会制造海量低价值 span、成本和噪声；应按可诊断的业务边界埋点。</td></tr>
+<tr><td>State 怎么进 Langfuse？</td><td>只记录 debug 所需的关键快照/摘要，不默认复制整个 state。</td></tr>
+</tbody></table>
+<div class="card key"><div class="tag">🎯 本课要点</div><ul>
+<li>复杂 Agent 的关键是<strong>观测边界设计</strong>，不是 span 数量。</li>
+<li>LangChain CallbackHandler 负责框架事件，<code>@observe</code>/手工 observation 补业务边界。</li>
+<li>应用 state 与 trace 是两件事；重要 state 要主动选择性记录。</li>
+</ul></div>
+<div class="selftest">
+<h2>🧪 自测 · 想一想为什么这么设计</h2>
+<div class="quiz">
+  <div class="qn">1. 复杂 LangGraph Agent 只挂一个 Langfuse CallbackHandler 后，哪件事仍可能需要手工埋点？</div>
+  <ol class="opts">
+    <li>业务层 supervisor 路由与自研 HTTP/DB 工具边界</li>
+    <li>Python 函数返回语句本身</li>
+    <li>LangChain 已经发出的标准 model callback</li>
+  </ol>
+  <details class="accordion" open>
+    <summary>看答案与解析 <span class="hint">点击展开</span></summary>
+    <div class="acc-body"><div class="qa"><div class="a"><strong>答案：A</strong>。Callback 覆盖框架事件，但不会自动理解所有业务边界和自研 I/O；这些地方需要选择性手工 observation。</div></div></div>
+  </details>
+</div>
+<div class="card spark">
+  <div class="tag">💭 发散思考（没有标准答案，动手或动脑想想）</div>
+  <ul>
+    <li>你的 Agent State 里哪些字段值得进 trace，哪些不应该每步完整复制？为什么？</li>
+  </ul>
+</div>
+</div>
+</section>
+<section class="lesson-print">
+<h1>v4 实时查询与评估闭环</h1>
+<div class="card prereq"><div class="tag">🧭 <span class="lang-zh">读前</span><span class="lang-en">Before you start</span></div><div class="lang-zh">先读 <a class="xref" href="56-v4-architecture-delta.html">第56课</a> 的新数据模型，并回顾 <a class="xref" href="28-scoring-model.html">第28课</a> 与 <a class="xref" href="34-datasets-and-items.html">第34课</a> 的 score/dataset，本课把它们串成 v4 质量闭环。</div><div class="lang-en">Read <a class="xref" href="56-v4-architecture-delta.html">Lesson 56</a>, then revisit <a class="xref" href="28-scoring-model.html">Lesson 28</a> and <a class="xref" href="34-datasets-and-items.html">Lesson 34</a> on scores/datasets; this lesson connects them into the v4 quality loop.</div></div>
+<p class="lead">v4 的读取也跟着数据模型变了。最容易踩的坑是：写入已经是新 OTel/events 路径，但你仍用旧 trace API 判断“数据有没有到”。正确做法是把<strong>写入、读取、评估</strong>看成一条整体迁移链路。</p>
+<div class="card analogy"><div class="tag">📋 生活类比</div>你把仓库换成了新货架，却还拿旧仓库的货位表去找货，当然会以为“货丢了”。v4 的 Observations API v2，就是和新 events 模型对齐的新货位表。</div>
+<h2>生产读路径应该怎么分？</h2>
+<table class="t"><thead><tr><th>需求</th><th>v4 主路径</th><th>概念</th></tr></thead><tbody>
+<tr><td>查调用明细</td><td>Observations API v2</td><td>以 observation/root observation 为统一单位</td></tr>
+<tr><td>做聚合指标</td><td>Metrics API v2</td><td>直接面向新 events 查询</td></tr>
+<tr><td>查评分</td><td>Scores API v3</td><td>独立评分实体，挂到 observation/root 上</td></tr>
+<tr><td>离线回归</td><td>Dataset + Experiment</td><td>固定测试集，比较模型/prompt/agent 版本</td></tr>
+</tbody></table>
+<h2>把“看 trace”升级成质量闭环</h2>
+<div class="vflow">
+<div class="step"><div class="num">1</div><div class="sc"><h4>Production observations</h4><p>在线流量产出真实 observation，保留输入、输出、工具链和成本。</p></div></div>
+<div class="step"><div class="num">2</div><div class="sc"><h4>Scores / evaluators</h4><p>规则、代码、LLM-as-a-judge 或人工评分，给结果加质量信号。</p></div></div>
+<div class="step"><div class="num">3</div><div class="sc"><h4>Bad-case mining</h4><p>按 score、错误类型、成本或 latency 过滤，找真正值得修的样本。</p></div></div>
+<div class="step"><div class="num">4</div><div class="sc"><h4>Dataset</h4><p>把代表性 bad case 固化成可重复的回归集，而不是只看一次 trace。</p></div></div>
+<div class="step"><div class="num">5</div><div class="sc"><h4>Experiment</h4><p>新 prompt/model/agent 版本重跑同一数据集，对比质量、成本和延迟。</p></div></div>
+</div>
+<h2>Online eval 和 offline experiment 不要混</h2>
+<div class="cols"><div class="col"><h4>Online</h4><p>针对真实生产 observations 持续抽样/评分。目标是<strong>发现问题和漂移</strong>。</p></div><div class="col"><h4>Offline</h4><p>对固定 dataset 重跑候选版本。目标是<strong>上线前比较与回归</strong>。</p></div></div>
+<p>两者通过 Dataset 串起来：线上坏样本进入 dataset，离线实验验证修复，再回到线上继续采样。这个闭环比“做一个 dashboard 看平均分”更接近真正的 Agent 工程。</p>
+<h2>对复杂 Agent，评分应挂在哪一层？</h2>
+<p>v4 里 root observation 很适合作为<strong>整次任务结果</strong>的评价对象；具体 tool/generation 则适合挂局部 score。这样你能同时回答“整单任务成功了吗？”与“是哪一个步骤拖垮了结果？”。</p>
+<div class="card warn"><div class="tag">⚠️ 迁移提醒</div>切到 events-only 前，要确认旧的 trace-level evaluator、导出脚本和内部查询是否仍假设“trace 是独立实体”。在 observation-first 模型里，这些逻辑通常要改成<strong>root observation / observation id</strong>。</div>
+<div class="card key"><div class="tag">🎯 本课要点</div><ul>
+<li>v4 的实时读取要和新 events 写入一起迁移，不能只换 SDK。</li>
+<li>Observations v2 / Metrics v2 / Scores v3 分别承担明细、聚合和评分读取。</li>
+<li>真正有价值的 eval 链路是：生产 observation → score → bad case → dataset → experiment → 回归上线。</li>
+</ul></div>
+<div class="selftest">
+<h2>🧪 自测 · 想一想为什么这么设计</h2>
+<div class="quiz">
+  <div class="qn">1. 线上 evaluator 与离线 experiment 最合理的关系是什么？</div>
+  <ol class="opts">
+    <li>只保留平均 score dashboard 即可</li>
+    <li>线上找 bad case，固化进 dataset，再用 experiment 回归验证修复</li>
+    <li>二者完全独立</li>
+  </ol>
+  <details class="accordion" open>
+    <summary>看答案与解析 <span class="hint">点击展开</span></summary>
+    <div class="acc-body"><div class="qa"><div class="a"><strong>答案：B</strong>。生产 observation → score → bad case → dataset → experiment 才形成持续改进闭环。</div></div></div>
+  </details>
+</div>
+<div class="card spark">
+  <div class="tag">💭 发散思考（没有标准答案，动手或动脑想想）</div>
+  <ul>
+    <li>整次 Agent 任务的 score 和某个 generation/tool 的局部 score 应分别挂在哪里？</li>
+  </ul>
+</div>
+</div>
+</section>
+<section class="lesson-print">
+<h1>自托管 v4 迁移与上线</h1>
+<div class="card prereq"><div class="tag">🧭 <span class="lang-zh">读前</span><span class="lang-en">Before you start</span></div><div class="lang-zh">先读 <a class="xref" href="56-v4-architecture-delta.html">第56课</a> 的迁移全景与 <a class="xref" href="11-deployment-topology.html">第11课</a> 的部署拓扑，本课落到自托管升级与上线步骤。</div><div class="lang-en">Read <a class="xref" href="56-v4-architecture-delta.html">Lesson 56</a> for the migration map and <a class="xref" href="11-deployment-topology.html">Lesson 11</a> for deployment topology; this lesson turns them into a self-hosted rollout.</div></div>
+<p class="lead">自托管从 v3 升到 v4，最大的错误是把它当成“镜像标签从 <code>:3</code> 改成 <code>:4</code>”。v4 没增加新的基础设施服务，但<strong>ClickHouse 数据模型和生产者/消费者协议都在迁移</strong>，所以应该把它当成一次数据平台变更。</p>
+<div class="card analogy"><div class="tag">📋 生活类比</div>这不是“给商场换招牌”，而是“营业期间把仓库货架换掉”。正确方法是先让旧货架和新货架同时接货（dual write），确认新仓库能查、能算、能回滚，再把旧货架停掉。</div>
+<h2>基础设施先升级到能承载 v4</h2>
+<table class="t"><thead><tr><th>组件</th><th>迁移基线</th><th>职责</th></tr></thead><tbody>
+<tr><td>PostgreSQL</td><td>15+（16 推荐）</td><td>项目、用户、prompt、dataset、配置</td></tr>
+<tr><td>ClickHouse</td><td>25.12+（26.4 推荐）</td><td>events 宽事件与分析查询</td></tr>
+<tr><td>Redis</td><td>7.0+（7.2 推荐）</td><td>BullMQ 队列、缓存、锁/限流</td></tr>
+<tr><td>S3 / MinIO</td><td>兼容对象存储</td><td>媒体、blob、导出和部分异步载荷</td></tr>
+<tr><td>web / worker</td><td>同一 v4 release</td><td>请求/UI 与后台任务</td></tr>
+</tbody></table>
+<h2>迁移不要一步跳：legacy → dual → events_only</h2>
+<div class="vflow">
+<div class="step"><div class="num">1</div><div class="sc"><h4>备份 + 升基础设施</h4><p>先备份 PostgreSQL 和 ClickHouse，再升级数据库/Redis 到支持版本。</p></div></div>
+<div class="step"><div class="num">2</div><div class="sc"><h4>v4 server，先保 legacy/dual</h4><p>让应用升级，但继续保留旧路径，同时开始给新 events 写数据。</p></div></div>
+<div class="step"><div class="num">3</div><div class="sc"><h4>回填历史数据</h4><p>将旧 traces/observations 转成新 events；大实例需要预留明显的额外 ClickHouse 空间。</p></div></div>
+<div class="step"><div class="num">4</div><div class="sc"><h4>迁移所有生产者和读取者</h4><p>SDK/OTel producer、Observations/Metrics/Scores reader、eval、export 一起切新路径。</p></div></div>
+<div class="step"><div class="num">5</div><div class="sc"><h4>events_only</h4><p>确认覆盖率、延迟、错误率和历史数据后，再停止 legacy 写入。</p></div></div>
+</div>
+<h2>历史回填为什么可能吃掉很多磁盘？</h2>
+<p>迁移期间旧表不能立刻删，新 events 表又要逐步生成，所以一段时间内你会同时保留<strong>旧数据 + 新数据 + merge/临时空间</strong>。官方迁移说明给出的容量规划量级可到约 <strong>3× ClickHouse headroom</strong>。如果历史数据非常多，另一种策略是只保留迁移窗口，等待旧数据随 retention 滚出，而不是一次性全回填。</p>
+<h2>第三方自托管实战暴露的一个真实坑</h2>
+<div class="card warn"><div class="tag">⚠️ 实战经验</div>Jacar 在 v4.37.0 的 Docker Compose 实测里遇到过：<strong>worker 在 web 完成迁移前先启动，模型价格未正确加载，导致新 generation 没有成本</strong>；迁移完成后重启 worker，后续数据恢复正常。它不是“协议保证”，但提醒你：升级后不要只看容器是否 Up，要检查 web/worker 日志、迁移完成状态，以及一条真实 generation 是否能算出 token/cost。</div>
+<h2>上线前的最小检查单</h2>
+<table class="t"><thead><tr><th>检查</th><th>你要看到什么</th></tr></thead><tbody>
+<tr><td>写入</td><td>新 SDK/OTel trace 能进入 events</td></tr>
+<tr><td>读取</td><td>Observations v2 / Metrics v2 能及时看到同一数据</td></tr>
+<tr><td>上下文</td><td>user/session/tags 在子 observations 上正确传播</td></tr>
+<tr><td>评估</td><td>root observation 与局部 generation/tool score 都正常</td></tr>
+<tr><td>成本</td><td>模型识别、token、price/cost 正常</td></tr>
+<tr><td>恢复</td><td>备份已验证；不要假设 schema migration 后能靠降镜像自动回滚</td></tr>
+</tbody></table>
+<div class="card detail"><div class="tag">🔎 运维原则</div>生产环境不要把示例 Compose 当 HA 方案：数据库备份、ClickHouse 容量、Redis 持久性、对象存储、web/worker 副本、监控和升级顺序都要单独设计。版本也应 pin 到明确 release，而不是长期漂在浮动 tag。</div>
+<div class="card key"><div class="tag">🎯 本课要点 · 全书终</div><ul>
+<li>v4 自托管升级是<strong>数据迁移</strong>，不是镜像替换。</li>
+<li>先基础设施，再 dual write/backfill，再迁 producer+reader，最后 events_only。</li>
+<li>切换前验证一条完整业务链：trace → query → score → cost，而不只是“容器能启动”。</li>
+</ul></div>
+<div class="selftest">
+<h2>🧪 自测 · 想一想为什么这么设计</h2>
+<div class="quiz">
+  <div class="qn">1. 为什么自托管 v3→v4 不应该直接一步切到 <code>events_only</code>？</div>
+  <ol class="opts">
+    <li>因为 v4 不支持 ClickHouse</li>
+    <li>因为 worker 必须永久停机</li>
+    <li>因为需要先验证 dual write、历史回填、producer/reader 与恢复路径</li>
+  </ol>
+  <details class="accordion" open>
+    <summary>看答案与解析 <span class="hint">点击展开</span></summary>
+    <div class="acc-body"><div class="qa"><div class="a"><strong>答案：C</strong>。v4 涉及 ClickHouse 数据模型迁移；分阶段切换可以验证覆盖率、实时读取、成本和回滚准备。</div></div></div>
+  </details>
+</div>
+<div class="card spark">
+  <div class="tag">💭 发散思考（没有标准答案，动手或动脑想想）</div>
+  <ul>
+    <li>如果你负责一次生产升级，上线前会用哪一条真实请求验证 trace→query→score→cost 全链路？</li>
   </ul>
 </div>
 </div>

@@ -12,9 +12,11 @@ query paths work in the code"* and *"how to build, test and contribute a PR"*.
 > attributed excerpts. Langfuse itself is **MIT**-licensed by its own authors (except some enterprise
 > features).
 
-> **Status:** **complete** — all **11 parts / 55 lessons** authored, source-verified per milestone,
+> **Status:** **complete** — all **12 parts / 61 lessons** authored, source-verified per milestone,
 > and gate-checked (0 errors). See `docs/superpowers/specs/` for the design spec and
 > `docs/superpowers/plans/` for the roadmap and per-milestone audit logs.
+
+Part 12 is a **v4 supplement** pinned on 2026-09-23 to Langfuse Server **v4.42.0** and Python SDK **v4.15.4**. The original L01–L55 source tour remains intentionally tied to its v3.199.0-era baseline so the architectural delta stays explicit.
 
 Every lesson is self-contained, embeds both languages (toggle in the page), and uses hand-drawn
 diagrams, worked-example traces, real (cited) code, and a short self-test quiz.
@@ -23,7 +25,7 @@ diagrams, worked-example traces, real (cited) code, and a short self-test quiz.
 
 ## What it covers
 
-The guide is organized into eleven parts that build up along the data lifecycle:
+The guide is organized into twelve parts that build up along the data lifecycle:
 
 | Part | Topic | Lessons |
 | --- | --- | --- |
@@ -38,6 +40,7 @@ The guide is organized into eleven parts that build up along the data lifecycle:
 | 9 | 自动化与集成 — automations/webhooks, Slack/notifications, analytics integrations, batch exports | L44–47 |
 | 10 | 平台与运维 — auth, RBAC/API keys, EE/entitlements, self-observability, data lifecycle, build/test | L48–53 |
 | 11 | 设计专题与终章 — design themes synthesis, capstone | L54–55 |
+| 12 | v4 迁移与生产实战 — v3.199→v4.42 architecture delta, unified events, OTel SDK, agents/evals, self-hosted rollout | L56–61 |
 
 ## How to view
 
@@ -110,8 +113,10 @@ Dual-licensed:
 > **声明：** 本项目是**第三方、非官方**的学习材料，**不包含 Langfuse 源码**（仅引用少量、标注来源的
 > 代码片段来讲解）。Langfuse 本身由其作者以 **MIT** 许可发布（部分企业版功能除外）。
 
-> **进度：** **已完成** —— **11 个部分 / 55 课**全部完成，逐里程碑核验源码忠实、全部 gate 通过（0 错误）。
+> **进度：** **已完成** —— **12 个部分 / 61 课**全部完成，逐里程碑核验源码忠实、全部 gate 通过（0 错误）。
 > 设计规格见 `docs/superpowers/specs/`，路线图与逐里程碑审计日志见 `docs/superpowers/plans/`。
+
+第 12 部分是 **v4 补充章节**：截至 2026-09-23 对照 Langfuse Server **v4.42.0** 与 Python SDK **v4.15.4**；原 L01–L55 仍保留 v3.199.0 时代的源码基线，用于清楚展示架构演进。
 
 每一课都自成一体、内嵌中英双语（页内可切换），用手绘图、worked-example 追踪图、真实（标注来源的）
 代码和一段自测题来讲清一个概念。

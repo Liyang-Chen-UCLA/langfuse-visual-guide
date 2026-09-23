@@ -160,6 +160,18 @@ PAGES = [
      "第十一部分 · 设计专题与终章", "Part 11 · Design Themes & Capstone"),
     ("55-capstone-trace-life.html", "终章·一条 trace 的完整一生", "Capstone: the full life of a trace",
      "第十一部分 · 设计专题与终章", "Part 11 · Design Themes & Capstone"),
+    ("56-v4-architecture-delta.html", "v4 架构总览：从 v3.199 到 v4.42", "V4 architecture delta: v3.199 → v4.42",
+     "第十二部分 · v4 迁移与生产实战", "Part 12 · V4 Migration & Production Practice"),
+    ("57-v4-unified-events.html", "v4 统一 events 数据模型", "V4 unified events data model",
+     "第十二部分 · v4 迁移与生产实战", "Part 12 · V4 Migration & Production Practice"),
+    ("58-python-sdk-v4-otel.html", "Python SDK v4：OTel 原生埋点", "Python SDK v4: OTel-native tracing",
+     "第十二部分 · v4 迁移与生产实战", "Part 12 · V4 Migration & Production Practice"),
+    ("59-agent-langchain-v4.html", "Agent / LangChain v4 实战", "Agent & LangChain tracing in v4",
+     "第十二部分 · v4 迁移与生产实战", "Part 12 · V4 Migration & Production Practice"),
+    ("60-v4-evals-real-time.html", "v4 实时查询与评估闭环", "V4 real-time reads & evaluation loop",
+     "第十二部分 · v4 迁移与生产实战", "Part 12 · V4 Migration & Production Practice"),
+    ("61-v4-self-hosted-migration.html", "自托管 v4 迁移与上线", "Self-hosted v4 migration & rollout",
+     "第十二部分 · v4 迁移与生产实战", "Part 12 · V4 Migration & Production Practice"),
 ]
 
 
@@ -873,6 +885,18 @@ SUBTITLES = {
      "step back into six themes: wide events / immutability / async / dual storage / multi-tenancy / cost"),
     "55-capstone-trace-life.html": ("跟一条 trace 走完一生，把 55 课串成流水线 · 七驿站 · 三隐线 · trace→score 闭环反哺应用",
      "follow one trace through its whole life, stringing all 55 lessons; seven stations; three hidden threads"),
+    "56-v4-architecture-delta.html": ("v3.199→v4.42 · observation-first · events unified · OTel-native · 分阶段迁移",
+     "v3.199→v4.42; observation-first; unified events; OTel-native; staged migration"),
+    "57-v4-unified-events.html": ("events_full · root observation · 反范式化 · ReplacingMergeTree · core/full 分层读取",
+     "events_full; root observation; denormalization; ReplacingMergeTree; core/full reads"),
+    "58-python-sdk-v4-otel.html": ("get_client/@observe · OTel context · update_current_span · flush · 实时读取一起迁",
+     "get_client/@observe; OTel context; update_current_span; flush; migrate real-time reads too"),
+    "59-agent-langchain-v4.html": ("CallbackHandler+手工埋点 · Agent/tool/generation 边界 · State≠trace · context 传播",
+     "CallbackHandler + manual spans; agent/tool/generation boundaries; State≠trace; context propagation"),
+    "60-v4-evals-real-time.html": ("Observations v2/Metrics v2/Scores v3 · bad case→dataset→experiment→回归",
+     "Observations v2 / Metrics v2 / Scores v3; bad case→dataset→experiment→regression"),
+    "61-v4-self-hosted-migration.html": ("基础设施先行 · legacy→dual→events_only · backfill · 容量 · 上线检查",
+     "upgrade infra first; legacy→dual→events_only; backfill; capacity; cutover checks"),
 }
 
 # Optional 「读前 / Before you start」 prerequisite hints: filename -> (zh, en).
@@ -1032,6 +1056,24 @@ PREREQS = {
     "55-capstone-trace-life.html": (
         "先读 第5课 的一生鸟瞰，本课跟一条 trace 走完贯穿 55 课的完整旅程。",
         "Read Lesson 5 for the bird's-eye life; this capstone follows one trace through the full journey across all 55 lessons."),
+    "56-v4-architecture-delta.html": (
+        "先读 第55课 串起 v3.199.0 的完整全景，本部分再专门补 v4 架构差异与迁移。",
+        "Read Lesson 55 to connect the v3.199.0 architecture first; Part 12 then focuses on the v4 delta and migration."),
+    "57-v4-unified-events.html": (
+        "先读 第56课 的 v4 总览，本课深入统一 events 与 root observation。",
+        "Read Lesson 56 for the v4 overview; this lesson dives into unified events and root observations."),
+    "58-python-sdk-v4-otel.html": (
+        "先读 第56课 与 第18课，本课把 OTel 从服务端入口延伸到 Python SDK v4。",
+        "Read Lesson 56 and Lesson 18; this lesson extends OTel from server ingestion into the Python SDK v4."),
+    "59-agent-langchain-v4.html": (
+        "先读 第58课 的 OTel context，本课再讲 LangChain/Agent 的观测边界与上下文传播。",
+        "Read Lesson 58 on OTel context; this lesson applies it to LangChain/Agent boundaries and propagation."),
+    "60-v4-evals-real-time.html": (
+        "先读 第56课 的新数据模型，并回顾 第28课 与 第34课 的 score/dataset，本课把它们串成 v4 质量闭环。",
+        "Read Lesson 56, then revisit Lesson 28 and Lesson 34 on scores/datasets; this lesson connects them into the v4 quality loop."),
+    "61-v4-self-hosted-migration.html": (
+        "先读 第56课 的迁移全景与 第11课 的部署拓扑，本课落到自托管升级与上线步骤。",
+        "Read Lesson 56 for the migration map and Lesson 11 for deployment topology; this lesson turns them into a self-hosted rollout."),
 }
 
 # Extra search keywords (not shown) so trimming the TOC subtitles above doesn't
@@ -1075,6 +1117,12 @@ SEARCH_KEYWORDS = {
     "53-build-test-dev-workflow.html": "monorepo pnpm Turbo cache dependsOn dx seed turborepo CI",
     "54-design-themes-synthesis.html": "wide events immutability async dual storage multi-tenancy cost ReplacingMergeTree",
     "55-capstone-trace-life.html": "capstone trace life seven stations closed loop self-observability projectId",
+    "56-v4-architecture-delta.html": "v4 migration observation-first unified events root observation OpenTelemetry OTel v4Transition dual events_only",
+    "57-v4-unified-events.html": "events_full events_core is_app_root parent_span_id ReplacingMergeTree denormalization full-text",
+    "58-python-sdk-v4-otel.html": "python sdk v4 get_client observe start_as_current_observation update_current_span flush OTLP context",
+    "59-agent-langchain-v4.html": "LangChain LangGraph CallbackHandler propagate_attributes agent tool generation state contextvars",
+    "60-v4-evals-real-time.html": "Observations API v2 Metrics API v2 Scores API v3 evaluator dataset experiment regression bad case",
+    "61-v4-self-hosted-migration.html": "self-hosted migration docker compose backfill ClickHouse Redis Postgres legacy dual events_only rollback capacity",
 }
 
 

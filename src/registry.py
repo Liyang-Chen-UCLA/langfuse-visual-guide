@@ -16,6 +16,7 @@ import part8
 import part9
 import part10
 import part11
+import part12
 # Filename -> {"zh": ..., "en": ...}. Keep keys in sync with shell.PAGES.
 CONTENT = {
     "01-what-is-langfuse.html": part1.LESSON_01,
@@ -73,4 +74,10 @@ CONTENT = {
     "53-build-test-dev-workflow.html": part10.LESSON_53,
     "54-design-themes-synthesis.html": part11.LESSON_54,
     "55-capstone-trace-life.html": part11.LESSON_55,
+    "56-v4-architecture-delta.html": part12.LESSON_56,
+    "57-v4-unified-events.html": part12.LESSON_57,
+    "58-python-sdk-v4-otel.html": part12.LESSON_58,
+    "59-agent-langchain-v4.html": part12.LESSON_59,
+    "60-v4-evals-real-time.html": part12.LESSON_60,
+    "61-v4-self-hosted-migration.html": part12.LESSON_61,
 }

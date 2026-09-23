@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-lang="zh"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{var l=localStorage.getItem('lvg-lang');if(l==='en'){document.documentElement.dataset.lang='en';document.documentElement.lang='en';}}catch(e){}</script>
+<title>58 · Python SDK v4：OTel 原生埋点 / Python SDK v4: OTel-native tracing - Langfuse 图解教程</title>
+<meta name="description" content="第十二部分 · v4 迁移与生产实战｜Python SDK v4：OTel 原生埋点 - Langfuse 图解教程（中英双语，配真实源码对应、折叠深挖与设计取舍）">
+<meta name="theme-color" content="#059669">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAzMiAzMic+PHJlY3Qgd2lkdGg9JzMyJyBoZWlnaHQ9JzMyJyByeD0nNycgZmlsbD0nIzA1OTY2OScvPjxwYXRoIGQ9J005IDE2IEwyMiA4LjUgTTkgMTYgTDIyIDIzLjUnIHN0cm9rZT0nI2ZmZicgc3Ryb2tlLXdpZHRoPScxLjcnIGZpbGw9J25vbmUnLz48Y2lyY2xlIGN4PSc5JyBjeT0nMTYnIHI9JzMnIGZpbGw9JyNmZmYnLz48Y2lyY2xlIGN4PScyMicgY3k9JzguNScgcj0nMycgZmlsbD0nI2ZmZicvPjxjaXJjbGUgY3g9JzIyJyBjeT0nMjMuNScgcj0nMycgZmlsbD0nI2ZmZicvPjwvc3ZnPg==">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Langfuse 图解教程">
+<meta property="og:title" content="58 · Python SDK v4：OTel 原生埋点 / Python SDK v4: OTel-native tracing - Langfuse 图解教程">
+<meta property="og:description" content="第十二部分 · v4 迁移与生产实战｜Python SDK v4：OTel 原生埋点 - Langfuse 图解教程（中英双语，配真实源码对应、折叠深挖与设计取舍）">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="58 · Python SDK v4：OTel 原生埋点 / Python SDK v4: OTel-native tracing - Langfuse 图解教程">
+<meta name="twitter:description" content="第十二部分 · v4 迁移与生产实战｜Python SDK v4：OTel 原生埋点 - Langfuse 图解教程（中英双语，配真实源码对应、折叠深挖与设计取舍）">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --panel-2: #f0f2f5; --ink: #1d2129;
+  --muted: #5b6470; --faint: #6b7480; --line: #e1e5ea;
+  --accent: #059669; --accent-soft: #d1fae5; --accent-ink: #047857;
+  --blue: #2563eb; --blue-soft: #e7efff; --amber: #b4690e; --amber-soft: #fdf1dd;
+  --purple: #7c3aed; --purple-soft: #f0e9ff; --red: #d23f3f; --red-soft: #fbe6e6;
+  --teal: #0e7490; --teal-soft: #cffafe;
+  --code-bg: #0f172a; --code-ink: #e2e8f0; --code-line: #1e293b;
+  --shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116; --panel: #161b22; --panel-2: #1c232c; --ink: #e6edf3;
+    --muted: #9aa6b2; --faint: #808b98; --line: #2a323c;
+    --accent: #34d399; --accent-soft: #064e3b; --accent-ink: #6ee7b7;
+    --blue: #6ea8fe; --blue-soft: #16243f; --amber: #e0a44a; --amber-soft: #33270f;
+    --purple: #b794f6; --purple-soft: #271a40; --red: #f08080; --red-soft: #3a1a1a;
+    --teal: #22d3ee; --teal-soft: #083344;
+    --code-bg: #0a0f1a; --code-ink: #d8e2f0; --code-line: #14202f;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+html { scroll-behavior: smooth; overflow-x: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC",
+    "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  background: var(--bg); color: var(--ink); line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+code, .mono { font-family: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Menlo, Consolas, monospace; overflow-wrap: break-word; }
+
+/* ---- top progress bar ---- */
+.topbar {
+  position: sticky; top: 0; z-index: 50; background: var(--panel);
+  border-bottom: 1px solid var(--line); backdrop-filter: blur(8px);
+}
+.topbar-inner {
+  max-width: 960px; margin: 0 auto; padding: .7rem 1.25rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.topbar .home { font-size: .82rem; color: var(--muted); font-weight: 600; display:flex; gap:.5rem; align-items:center; }
+.topbar .home b { color: var(--accent); }
+.topbar .pill { font-size: .72rem; color: var(--muted); background: var(--panel-2);
+  padding: .2rem .6rem; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+.progress { height: 3px; background: var(--panel-2); }
+.progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--purple)); }
+
+.wrap { max-width: 820px; margin: 0 auto; padding: 2.4rem 1.25rem 5rem; }
+
+/* ---- hero ---- */
+.hero { margin-bottom: 2rem; }
+.hero .part { font-size: .76rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--accent); font-weight: 700; margin-bottom: .55rem; }
+.hero h1 { font-size: 2.05rem; line-height: 1.2; letter-spacing: -.01em; font-weight: 750; }
+.hero .lead { margin-top: .9rem; font-size: 1.06rem; color: var(--muted); }
+
+h2 { font-size: 1.32rem; margin: 2.4rem 0 .9rem; letter-spacing: -.01em;
+  display: flex; align-items: center; gap: .55rem; }
+h2::before { content: ""; width: 4px; height: 1.05em; background: var(--accent); border-radius: 3px; display: inline-block; }
+h3 { font-size: 1.05rem; margin: 1.4rem 0 .5rem; }
+p { margin: .7rem 0; }
+ul, ol { margin: .6rem 0 .6rem 1.3rem; }
+li { margin: .3rem 0; }
+strong { color: var(--ink); font-weight: 680; }
+.inline { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px;
+  padding: .08em .4em; font-size: .9em; color: var(--accent-ink); }
+
+/* ---- callout cards ---- */
+.card { border-radius: var(--radius); padding: 1.05rem 1.2rem; margin: 1.2rem 0;
+  border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); }
+.card .tag { font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: .4rem; margin-bottom: .5rem; }
+.card.macro { border-left: 4px solid var(--blue); }
+.card.macro .tag { color: var(--blue); }
+.card.detail { border-left: 4px solid var(--purple); }
+.card.detail .tag { color: var(--purple); }
+.card.analogy { border-left: 4px solid var(--amber); background: var(--amber-soft); }
+.card.analogy .tag { color: var(--amber); }
+.card.key { border-left: 4px solid var(--accent); background: var(--accent-soft); }
+.card.key .tag { color: var(--accent-ink); }
+.card.warn { border-left: 4px solid var(--red); background: var(--red-soft); }
+.card.warn .tag { color: var(--red); }
+.card.prereq { border-left: 4px solid var(--teal); background: var(--teal-soft); }
+.card.prereq .tag { color: var(--teal); }
+.card.spark { border-left: 4px solid #e0a000;
+  background: linear-gradient(100deg, rgba(224,160,0,.12), transparent 70%); }
+.card.spark .tag { color: #c98a00; }
+@media (prefers-color-scheme: dark) { .card.spark .tag { color: #f0c050; } }
+
+/* ---- code file callout ---- */
+.codefile { margin: 1.2rem 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line);
+  box-shadow: var(--shadow); }
+.codefile .cf-head { display: flex; align-items: center; gap: .55rem; padding: .5rem .85rem;
+  background: var(--panel-2); border-bottom: 1px solid var(--line); font-size: .8rem; }
+.codefile .cf-head .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex-shrink:0; }
+.codefile .cf-head .path { font-family: ui-monospace, monospace; color: var(--ink); font-weight: 600; }
+.codefile .cf-head .ln { margin-left: auto; color: var(--faint); font-size: .72rem; }
+.codefile pre { background: var(--code-bg); color: var(--code-ink); padding: .9rem 1rem;
+  overflow-x: auto; font-size: .82rem; line-height: 1.6; }
+.codefile pre .cm { color: #7d8aa3; }
+.codefile pre .kw { color: #c792ea; }
+.codefile pre .fn { color: #82aaff; }
+.codefile pre .st { color: #c3e88d; }
+.codefile pre .nb { color: #f78c6c; }
+
+pre.code { background: var(--code-bg); color: var(--code-ink); padding: .9rem 1rem; border-radius: 12px;
+  overflow-x: auto; font-size: .83rem; line-height: 1.6; margin: 1.1rem 0; box-shadow: var(--shadow); }
+pre.code .cm { color: #7d8aa3; } pre.code .kw { color: #c792ea; }
+pre.code .fn { color: #82aaff; } pre.code .st { color: #c3e88d; } pre.code .nb { color: #f78c6c; }
+
+/* ---- collapsible accordion (details/summary) ---- */
+.accordion { border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+  margin: .7rem 0; box-shadow: var(--shadow); overflow: hidden; }
+.accordion > summary { cursor: pointer; padding: .85rem 1.1rem; font-weight: 650; font-size: .96rem;
+  list-style: none; display: flex; align-items: center; gap: .6rem; user-select: none; }
+.accordion > summary::-webkit-details-marker { display: none; }
+.accordion > summary::after { content: "▶"; font-size: .68rem; color: var(--accent);
+  margin-left: auto; transition: transform .15s ease; }
+.accordion[open] > summary::after { transform: rotate(90deg); }
+.accordion > summary:hover { background: var(--panel-2); }
+.accordion[open] > summary { border-bottom: 1px solid var(--line); }
+.accordion .badge-num { background: var(--accent-soft); color: var(--accent-ink);
+  width: 1.6rem; height: 1.6rem; border-radius: 7px; display: inline-flex; align-items: center;
+  justify-content: center; font-size: .82rem; font-weight: 700; flex-shrink: 0; }
+.accordion .hint { font-size: .72rem; color: var(--faint); font-weight: 400; }
+.acc-body { padding: .9rem 1.1rem 1.1rem; }
+.acc-intro { color: var(--muted); font-size: .9rem; margin: .2rem 0 .4rem; }
+.qa { margin: 1rem 0; }
+.qa:first-child { margin-top: .3rem; }
+.qa .q { font-weight: 680; font-size: .9rem; display: flex; gap: .45rem; align-items: center; margin-bottom: .3rem; }
+.qa .a { color: var(--muted); font-size: .9rem; }
+.qa .a strong { color: var(--ink); }
+.qa pre.code { margin: .5rem 0 0; font-size: .78rem; }
+
+/* ---- flow diagram ---- */
+.flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; margin: 1.3rem 0;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1.2rem 1rem; box-shadow: var(--shadow); }
+.flow .node { flex: 1 1 0; min-width: 110px; text-align: center; padding: .7rem .5rem;
+  border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.flow .node .nt { font-weight: 700; font-size: .92rem; }
+.flow .node .nd { font-size: .76rem; color: var(--muted); margin-top: .2rem; }
+.flow .node.hl { background: var(--accent-soft); border-color: var(--accent); }
+.flow .arrow { align-self: center; color: var(--faint); font-size: 1.3rem; padding: 0 .35rem; }
+
+/* vertical flow */
+.vflow { margin: 1.3rem 0; }
+.vflow .step { display: flex; gap: .9rem; position: relative; padding-bottom: 1.1rem; }
+.vflow .step:not(:last-child)::before { content:""; position:absolute; left: 15px; top: 34px; bottom: -2px;
+  width: 2px; background: var(--line); }
+.vflow .num { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .85rem; flex-shrink: 0; z-index:1; }
+.vflow .sc h4 { margin: .25rem 0 .2rem; font-size: 1rem; }
+.vflow .sc p { margin: .15rem 0; font-size: .92rem; color: var(--muted); }
+.vflow .sc .mono { font-size: .8rem; color: var(--accent-ink); }
+
+/* layered architecture */
+.layers { margin: 1.3rem 0; display: flex; flex-direction: column; gap: .55rem; }
+.layer { border-radius: 12px; padding: .85rem 1.1rem; border: 1px solid var(--line); background: var(--panel);
+  box-shadow: var(--shadow); }
+.layer .lh { display: flex; align-items: center; gap: .6rem; }
+.layer .lh .badge { font-size: .7rem; font-weight: 700; padding: .12rem .5rem; border-radius: 999px; }
+.layer .lh .name { font-weight: 700; font-family: ui-monospace, monospace; }
+.layer .ld { font-size: .85rem; color: var(--muted); margin-top: .35rem; }
+.layer.l-core { border-left: 4px solid var(--accent); } .layer.l-core .badge { background: var(--accent-soft); color: var(--accent-ink); }
+.layer.l-main { border-left: 4px solid var(--blue); } .layer.l-main .badge { background: var(--blue-soft); color: var(--blue); }
+.layer.l-part { border-left: 4px solid var(--purple); } .layer.l-part .badge { background: var(--purple-soft); color: var(--purple); }
+.layer.l-app { border-left: 4px solid var(--amber); } .layer.l-app .badge { background: var(--amber-soft); color: var(--amber); }
+
+/* two-column compare */
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.2rem 0; }
+@media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+.col { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; box-shadow: var(--shadow); min-width: 0; }
+.col h4 { margin: 0 0 .4rem; font-size: .95rem; }
+
+table.t { width: 100%; border-collapse: collapse; margin: 1.1rem 0; font-size: .9rem;
+  background: var(--panel); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+table.t th, table.t td { padding: .6rem .8rem; text-align: left; border-bottom: 1px solid var(--line); }
+table.t th { background: var(--panel-2); font-size: .8rem; letter-spacing: .02em; }
+table.t tr:last-child td { border-bottom: none; }
+table.t td.mono, table.t td .mono { font-family: ui-monospace, monospace; font-size: .82rem; color: var(--accent-ink); }
+@media (max-width: 640px) {
+  /* Wide multi-column tables: scroll within their own box instead of
+     forcing page-level horizontal overflow (which clipped right columns). */
+  table.t { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.t th, table.t td { padding: .5rem .6rem; }
+  /* TOC rows: stack title over subtitle so the blurb reads left-aligned
+     under the title instead of being crammed to the right on a phone. */
+  .toc a { flex-direction: column; align-items: flex-start; gap: .3rem; }
+  .toc .ts { margin-left: 0; text-align: left; }
+  .toc .n { margin-bottom: -.2rem; }
+}
+.selftest { margin: 2.2rem 0 0; border-top: 2px dashed var(--line); padding-top: 1.2rem; }
+.selftest > h2 { margin-top: .2rem; }
+.quiz { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--blue);
+  border-radius: 12px; padding: .9rem 1.1rem; margin: 1rem 0; box-shadow: var(--shadow); }
+.quiz .qn { font-weight: 650; }
+.quiz ol.opts { list-style: upper-alpha; margin: .55rem 0 .6rem 1.5rem; padding: 0; }
+.quiz ol.opts li { margin: .3rem 0; padding-left: .15rem; }
+.quiz details.accordion { margin: .5rem 0 0; }
+.selftest code { font-family: ui-monospace, monospace; font-size: .9em; color: var(--accent-ink);
+  background: var(--accent-soft); padding: 0 .28em; border-radius: 4px; }
+
+/* footer nav */
+.footnav { display: flex; justify-content: space-between; gap: 1rem; margin-top: 3rem;
+  padding-top: 1.4rem; border-top: 1px solid var(--line); }
+.footnav a { flex: 1; padding: .85rem 1.1rem; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--panel); box-shadow: var(--shadow); transition: .15s; }
+.footnav a:hover { border-color: var(--accent); transform: translateY(-1px); }
+.footnav a.next { text-align: right; }
+.footnav .dir { font-size: .72rem; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; }
+.footnav .ttl { font-weight: 700; color: var(--ink); margin-top: .15rem; }
+.footnav a.disabled { opacity: .35; pointer-events: none; }
+
+/* index page */
+.toc { display: grid; gap: .7rem; margin-top: 1.6rem; }
+.toc-part { font-size: .78rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--accent); margin: 1.4rem 0 .2rem; }
+.toc a { display: flex; align-items: center; gap: .9rem; padding: .85rem 1.05rem; border-radius: 12px;
+  background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); transition: .15s; }
+.toc a:hover { border-color: var(--accent); transform: translateX(3px); }
+.toc .n { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .85rem; flex-shrink: 0; }
+.toc .tt { font-weight: 650; color: var(--ink); }
+.toc .ts { font-size: .8rem; color: var(--muted); margin-left: auto; text-align: right; }
+.toc-search { position: relative; margin: 1.6rem 0 -.4rem; }
+.toc-search input { width: 100%; box-sizing: border-box; padding: .75rem 2.8rem .75rem 1rem;
+  border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  font-size: .98rem; box-shadow: var(--shadow); }
+.toc-search input:focus { outline: none; border-color: var(--accent); }
+.toc-search .qcount { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);
+  color: var(--faint); font-size: .8rem; pointer-events: none; }
+.toc a.hide, .toc .toc-part.hide { display: none; }
+.t tr.hide, table.t.hide, h2.hide { display: none; }
+.toc-empty { display: none; color: var(--muted); padding: 1rem; text-align: center; }
+.toc-empty.show { display: block; }
+.hero.index h1 { font-size: 2.3rem; }
+.legend { display:flex; gap:1.2rem; flex-wrap:wrap; margin-top:1rem; font-size:.8rem; color:var(--muted); }
+.legend span { display:flex; align-items:center; gap:.4rem; }
+.legend i { width:12px; height:12px; border-radius:3px; display:inline-block; }
+.pdf-btn { display:inline-flex; align-items:center; gap:.4rem; padding:.55rem 1.1rem;
+  background:var(--accent); color:#fff; border-radius:10px; font-size:.9rem; font-weight:650;
+  box-shadow:var(--shadow); transition:.15s; }
+.pdf-btn:hover { background:var(--accent-ink); transform:translateY(-1px); }
+
+/* ---- bilingual language switch ----
+   Contract: <html> must carry data-lang="zh" (default) or "en".
+   page()/index_page() hard-code data-lang="zh"; LANG_BOOT may switch to "en". */
+html[data-lang="en"] .lang-zh { display: none !important; }
+html[data-lang="zh"] .lang-en { display: none !important; }
+.langtoggle { font-size:.72rem; font-weight:700; color:var(--accent-ink);
+  background:var(--accent-soft); border:1px solid var(--accent); border-radius:999px;
+  padding:.22rem .7rem; cursor:pointer; line-height:1.4; white-space:nowrap; }
+.langtoggle:hover { background:var(--accent); color:#fff; }
+
+/* ---- schematic: cell strips (vector rows / quant blocks / KV columns) ---- */
+.cellgroup { margin: 1.2rem 0; background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1rem 1.1rem; box-shadow: var(--shadow); }
+.cellgroup .cg-cap { font-size: .82rem; color: var(--muted); margin-bottom: .55rem; }
+.cellgroup .cg-cap b { color: var(--ink); }
+.cells { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.cells + .cells { margin-top: .5rem; }
+.cell { min-width: 2.1rem; padding: .38rem .5rem; text-align: center; border-radius: 8px;
+  background: var(--panel-2); border: 1px solid var(--line); font-size: .78rem;
+  font-family: ui-monospace, monospace; white-space: nowrap; }
+.cell.scale { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); font-weight: 700; }
+.cell.hl    { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.cell.q     { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+.cell.dim   { opacity: .45; }
+.cells .lab { font-size: .76rem; color: var(--faint); padding: 0 .35rem; }
+.cells .sep { color: var(--faint); padding: 0 .1rem; }
+
+/* ---- schematic: timeline lanes (write vs read, step-by-step) ---- */
+.timeline { margin: 1.2rem 0; display: flex; flex-direction: column; gap: .5rem;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1rem 1.1rem; box-shadow: var(--shadow); }
+.timeline .lane { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.timeline .lane-label { min-width: 6rem; font-size: .8rem; font-weight: 700; color: var(--muted); }
+.timeline .tslot { padding: .4rem .6rem; border-radius: 8px; background: var(--panel-2);
+  border: 1px solid var(--line); font-size: .78rem; text-align: center; font-family: ui-monospace, monospace; }
+.timeline .tslot.span { flex: 1; min-width: 8rem; background: var(--blue-soft); border-color: var(--blue);
+  color: var(--blue); font-weight: 700; }
+.timeline .tslot.now { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.timeline .tl-row { display: flex; align-items: flex-start; gap: .6rem; padding: .12rem 0; }
+.timeline .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: .45rem; }
+.timeline .tl-t { font-family: ui-monospace, monospace; font-weight: 700; color: var(--accent-ink); min-width: 2.4rem; font-size: .82rem; flex-shrink: 0; margin-top: .18rem; }
+.timeline .tl-c { font-size: .9rem; color: var(--muted); }
+
+/* ---- worked-example trace: one concrete input, stepped through ---- */
+.trace { margin: 1.3rem 0; background: var(--panel); border: 1px solid var(--line);
+  border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 1rem 1.1rem; box-shadow: var(--shadow); }
+.trace .tcap { font-size: .82rem; color: var(--muted); margin-bottom: .7rem; }
+.trace .tcap b { color: var(--accent-ink); }
+.trace .stations { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+.trace .stn { flex: 1 1 0; min-width: 116px; border: 1px solid var(--line); border-radius: 10px;
+  padding: .55rem; background: var(--bg); }
+.trace .stn h5 { margin: 0 0 .45rem; font-size: .8rem; color: var(--ink); }
+.trace .cellrow { display: flex; gap: .3rem; align-items: center; flex-wrap: wrap; }
+.trace .vc { min-width: 2.1rem; padding: .32rem .45rem; text-align: center; border-radius: 7px;
+  background: var(--panel-2); border: 1px solid var(--line); font: 600 .76rem ui-monospace, monospace; white-space: nowrap; }
+.trace .vc.hot  { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+.trace .vc.blue { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+.trace .vc.dim  { opacity: .42; }
+.trace .tlab { font-size: .68rem; color: var(--faint); margin-top: .35rem; }
+.trace .op { align-self: center; color: var(--accent); font: 700 .72rem ui-monospace, monospace;
+  padding: 0 .5rem; text-align: center; white-space: nowrap; }
+.trace svg { max-width: 100%; height: auto; display: block; margin: .3rem auto; }
+@media (max-width: 640px) { .trace .stations { flex-direction: column; } .trace .op { padding: .3rem 0; } }
+/* --- hand-drawn figure (inline SVG illustrations) --- */
+.fig { margin: 1.3rem 0; background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1rem 1rem .85rem; box-shadow: var(--shadow); text-align: center; }
+.fig svg { max-width: 100%; height: auto; display: block; margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif; }
+.fig svg text:not([fill]) { fill: var(--ink); }
+.fig .figcap { margin: .72rem auto 0; font-size: .8rem; color: var(--muted); line-height: 1.55; max-width: 46rem; }
+.fig .figcap b { color: var(--accent-ink); font-weight: 700; }
+/* inter-lesson cross-reference links (第N课 / Lesson N / LNN), added at build time */
+.xref { color: var(--accent-ink); text-decoration: none; border-bottom: 1px dotted var(--accent); white-space: nowrap; }
+.xref:hover { border-bottom-style: solid; background: var(--accent-soft); }
+</style>
+</head><body>
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="home" href="../index.html">🪢 <b class="lang-zh">Langfuse 图解教程</b><b class="lang-en">Langfuse Visual Guide</b></a>
+    <span class="pill"><span class="lang-zh">第十二部分 · v4 迁移与生产实战</span><span class="lang-en">Part 12 · V4 Migration &amp; Production Practice</span></span>
+    <span class="pill">58 / 61</span>
+    <button class="langtoggle" onclick="lvgToggleLang()" aria-label="switch language"><span class="lang-zh">EN</span><span class="lang-en">中</span></button>
+  </div>
+  <div class="progress"><span style="width:95%"></span></div>
+</div>
+<div class="wrap">
+  <div class="hero">
+    <div class="part"><span class="lang-zh">第十二部分 · v4 迁移与生产实战</span><span class="lang-en">Part 12 · V4 Migration &amp; Production Practice</span></div>
+    <h1><span class="lang-zh">Python SDK v4：OTel 原生埋点</span><span class="lang-en">Python SDK v4: OTel-native tracing</span></h1>
+  </div>
+  <div class="card prereq"><div class="tag">🧭 <span class="lang-zh">读前</span><span class="lang-en">Before you start</span></div><div class="lang-zh">先读 <a class="xref" href="56-v4-architecture-delta.html">第56课</a> 与 <a class="xref" href="18-opentelemetry-ingestion.html">第18课</a>，本课把 OTel 从服务端入口延伸到 Python SDK v4。</div><div class="lang-en">Read <a class="xref" href="56-v4-architecture-delta.html">Lesson 56</a> and <a class="xref" href="18-opentelemetry-ingestion.html">Lesson 18</a>; this lesson extends OTel from server ingestion into the Python SDK v4.</div></div>
+  <div class="lang-zh"><p class="lead">Python SDK v4 在 2026 年重写为 <strong>OpenTelemetry 原生 SDK</strong>。最关键的心智变化是：你不再手工维护一个“Langfuse trace 对象”，而是让<strong>当前 OTel context/span</strong>决定父子关系；Langfuse 在这个标准上下文之上增加 generation、agent、tool 等语义。</p>
+<div class="card analogy"><div class="tag">📋 生活类比</div>v3 像你自己拿一本族谱，创建每个人时手动告诉系统“这个人爸爸是谁”。v4 更像线程里已经有一个“当前家庭上下文”：进入一个 span，它自动成为当前节点；里面再开的 observation 自然就是它的孩子。</div>
+<h2>代码风格怎么变？</h2>
+<div class="cols"><div class="col"><h4>旧式思路</h4><pre class="code">langfuse = Langfuse()
+trace = langfuse.trace(name="request")
+span = trace.span(name="retrieve")
+generation = trace.generation(name="answer")</pre></div>
+<div class="col"><h4>v4 思路</h4><pre class="code">from langfuse import get_client, observe
+
+langfuse = get_client()
+
+@observe()
+def run():
+    with langfuse.start_as_current_observation(
+        as_type="generation",
+        name="answer"
+    ) as gen:
+        ...
+        gen.update(output="done")</pre></div></div>
+<p><code>get_client()</code> 拿到客户端；<code>@observe()</code> 自动把函数边界变成 observation；<code>start_as_current_observation()</code> 适合你需要显式控制类型和生命周期的地方；<code>update_current_span()</code> 用来给当前 span 补 input/output/metadata 等属性。</p>
+<h2>OTel 原生意味着什么？</h2>
+<div class="flow"><div class="node"><div class="nt">App / LangChain</div><div class="nd">产生 span/context</div></div><div class="arrow">→</div><div class="node hl"><div class="nt">OTLP</div><div class="nd">标准 trace 载荷</div></div><div class="arrow">→</div><div class="node"><div class="nt">Langfuse</div><div class="nd">映射为 events</div></div></div>
+<p>这使 Langfuse 能和其它 OTel instrumentation 共存：HTTP、数据库、队列、LLM 都可以在一棵标准 trace 树里。对平台迁移而言，这比“换一个 decorator 名字”重要得多，因为<strong>上下文传播的责任从专用 client 对象转向 OTel context</strong>。</p>
+<h2>两个很实用的坑</h2>
+<div class="card warn"><div class="tag">⚠️ 实战</div><ul>
+<li><strong>先加载环境变量，再 <code>get_client()</code>。</strong> 第三方 v4 实战中最常见的“为什么没上报/401”之一，就是初始化顺序错了。</li>
+<li><strong>短生命周期脚本最后 <code>flush()</code>。</strong> SDK 会批量异步上报；进程太快退出时，不 flush 可能让最后一批 span 还没发出去。</li>
+</ul></div>
+<h2>实时链路也变了</h2>
+<p>当前 Python SDK README 明确把 v4 OTel 摄取 + Observations API v2 / Metrics API v2 作为实时路径。也就是说“写入走新 events，但读取还走旧 trace API”会造成你误以为数据没到；<strong>producer 和 reader 要一起迁移。</strong></p>
+<div class="card detail"><div class="tag">🔎 源码锚点</div>
+<ul><li><code>langfuse-python/pyproject.toml</code>：v4.15.4，直接依赖 OTel API/SDK/OTLP exporter。</li>
+<li><code>langfuse/_client/client.py</code>：<code>start_as_current_observation</code>、<code>update_current_span</code> 等核心入口。</li>
+<li><code>langfuse/_client/observe.py</code>：<code>@observe</code> 如何围绕当前 context 创建 observation。</li></ul></div>
+<div class="card key"><div class="tag">🎯 本课要点</div><ul>
+<li>v4 Python SDK 的核心不再是 trace object，而是<strong>当前 OTel span/context</strong>。</li>
+<li><code>@observe</code> 管函数边界，<code>start_as_current_observation</code> 管显式 observation，<code>update_current_span</code> 补属性。</li>
+<li>初始化顺序与 <code>flush()</code> 是小事，但非常容易造成“平台上看不到 trace”的假故障。</li>
+</ul></div><div class="selftest">
+<h2>🧪 自测 · 想一想为什么这么设计</h2>
+<div class="quiz">
+  <div class="qn">1. Python SDK v4 中父子 observation 关系主要由什么决定？</div>
+  <ol class="opts">
+    <li>一个手工维护的全局 trace_id 列表</li>
+    <li>当前 OTel span/context</li>
+    <li>PostgreSQL 外键</li>
+  </ol>
+  <details class="accordion">
+    <summary>看答案与解析 <span class="hint">点击展开</span></summary>
+    <div class="acc-body"><div class="qa"><div class="a"><strong>答案：B</strong>。v4 SDK 基于 OpenTelemetry context 建树；<code>@observe</code> 和 <code>start_as_current_observation</code> 都利用当前上下文。</div></div></div>
+  </details>
+</div>
+<div class="card spark">
+  <div class="tag">💭 发散思考（没有标准答案，动手或动脑想想）</div>
+  <ul>
+    <li>为什么短生命周期脚本通常要显式 <code>flush()</code>？</li>
+  </ul>
+</div>
+</div></div>
+  <div class="lang-en"><p class="lead">The Python SDK v4 was rewritten in 2026 as an <strong>OpenTelemetry-native SDK</strong>. The core mental shift is that you no longer carry a stateful “Langfuse trace object”. Instead, the <strong>current OTel context/span</strong> determines parent-child structure, with Langfuse adding semantics such as generation, agent and tool.</p>
+<div class="card analogy"><div class="tag">📋 Analogy</div>V3 is like carrying a genealogy book and manually telling every new person who their parent is. V4 is more like entering a current family context: open a span and it becomes current; observations created inside it naturally become children.</div>
+<h2>How does the code style change?</h2>
+<div class="cols"><div class="col"><h4>Legacy mindset</h4><pre class="code">langfuse = Langfuse()
+trace = langfuse.trace(name="request")
+span = trace.span(name="retrieve")
+generation = trace.generation(name="answer")</pre></div>
+<div class="col"><h4>V4 mindset</h4><pre class="code">from langfuse import get_client, observe
+
+langfuse = get_client()
+
+@observe()
+def run():
+    with langfuse.start_as_current_observation(
+        as_type="generation",
+        name="answer"
+    ) as gen:
+        ...
+        gen.update(output="done")</pre></div></div>
+<p><code>get_client()</code> obtains the client; <code>@observe()</code> turns a function boundary into an observation; <code>start_as_current_observation()</code> is for explicit type/lifetime control; <code>update_current_span()</code> enriches the current span with input/output/metadata.</p>
+<h2>What does OTel-native buy you?</h2>
+<div class="flow"><div class="node"><div class="nt">App / LangChain</div><div class="nd">creates span/context</div></div><div class="arrow">→</div><div class="node hl"><div class="nt">OTLP</div><div class="nd">standard trace payload</div></div><div class="arrow">→</div><div class="node"><div class="nt">Langfuse</div><div class="nd">maps to events</div></div></div>
+<p>Langfuse can coexist with other OTel instrumentation: HTTP, databases, queues and LLM work can share one standard trace tree. The important migration is therefore not a decorator rename; <strong>context propagation moves from a proprietary client object to OTel context.</strong></p>
+<h2>Two practical gotchas</h2>
+<div class="card warn"><div class="tag">⚠️ Practice</div><ul>
+<li><strong>Load environment variables before <code>get_client()</code>.</strong> A common v4 field failure is constructing the client before credentials/base URL are present.</li>
+<li><strong>Call <code>flush()</code> in short-lived scripts.</strong> The SDK batches asynchronously; a process can exit before the last batch is exported.</li>
+</ul></div>
+<h2>The real-time path changed too</h2>
+<p>The current Python SDK README identifies v4 OTel ingestion together with Observations API v2 / Metrics API v2 as the real-time path. If the producer writes the new events model while your reader still polls legacy trace APIs, you can misdiagnose fresh data as missing. <strong>Migrate producers and readers together.</strong></p>
+<div class="card detail"><div class="tag">🔎 Source anchors</div><ul>
+<li><code>langfuse-python/pyproject.toml</code>: v4.15.4 with direct OTel API/SDK/OTLP exporter dependencies.</li>
+<li><code>langfuse/_client/client.py</code>: <code>start_as_current_observation</code>, <code>update_current_span</code>.</li>
+<li><code>langfuse/_client/observe.py</code>: how <code>@observe</code> creates observations around current context.</li>
+</ul></div>
+<div class="card key"><div class="tag">🎯 Key points</div><ul>
+<li>V4 Python tracing centers on the <strong>current OTel span/context</strong>, not a stateful trace object.</li>
+<li>Use <code>@observe</code> for function boundaries, <code>start_as_current_observation</code> for explicit observations, and <code>update_current_span</code> to enrich the current span.</li>
+<li>Initialization order and <code>flush()</code> are small details that cause surprisingly many “missing trace” failures.</li>
+</ul></div><div class="selftest">
+<h2>🧪 Self-test - think about the design</h2>
+<div class="quiz">
+  <div class="qn">1. What primarily determines parent-child observation relationships in Python SDK v4?</div>
+  <ol class="opts">
+    <li>A manually maintained global trace-id list</li>
+    <li>The current OTel span/context</li>
+    <li>PostgreSQL foreign keys</li>
+  </ol>
+  <details class="accordion">
+    <summary>Show answer &amp; explanation <span class="hint">click to expand</span></summary>
+    <div class="acc-body"><div class="qa"><div class="a"><strong>Answer: B</strong>. The v4 SDK builds the tree from OpenTelemetry context; both <code>@observe</code> and <code>start_as_current_observation</code> use current context.</div></div></div>
+  </details>
+</div>
+<div class="card spark">
+  <div class="tag">💭 Open questions (no single right answer - just think or try)</div>
+  <ul>
+    <li>Why should short-lived scripts commonly call <code>flush()</code> explicitly?</li>
+  </ul>
+</div>
+</div></div>
+  <div class="footnav"><a class="prev" href="57-v4-unified-events.html"><div class="dir"><span class="lang-zh">← 上一课</span><span class="lang-en">← Prev</span></div><div class="ttl"><span class="lang-zh">v4 统一 events 数据模型</span><span class="lang-en">V4 unified events data model</span></div></a><a class="next" href="59-agent-langchain-v4.html"><div class="dir"><span class="lang-zh">下一课 →</span><span class="lang-en">Next →</span></div><div class="ttl"><span class="lang-zh">Agent / LangChain v4 实战</span><span class="lang-en">Agent &amp; LangChain tracing in v4</span></div></a></div>
+</div>
+<script>
+function lvgSetLang(l){
+  l=(l==='en')?'en':'zh';
+  var d=document.documentElement;
+  d.dataset.lang=l; d.lang=(l==='en'?'en':'zh-CN');
+  try{localStorage.setItem('lvg-lang',l);}catch(e){}
+}
+function lvgToggleLang(){
+  lvgSetLang(document.documentElement.dataset.lang==='en'?'zh':'en');
+}
+</script>
+</body></html>

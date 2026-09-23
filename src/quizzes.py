@@ -3895,6 +3895,68 @@ QUIZZES = {
             },
         ],
     },
+
+    "56-v4-architecture-delta.html": {
+        "mcq": [{"q": {"zh": "Langfuse v4 最核心的架构变化是什么？", "en": "What is the central Langfuse v4 architecture shift?"},
+                 "opts": [
+                    {"zh": "把所有数据都搬到 PostgreSQL", "en": "Move all data into PostgreSQL"},
+                    {"zh": "observation-first + unified events + OTel-native", "en": "observation-first + unified events + OTel-native"},
+                    {"zh": "取消 worker，只保留 web", "en": "Remove the worker and keep only web"}],
+                 "answer": 1,
+                 "why": {"zh": "v4 的主线是 observation-first、统一 events 读模型和 OTel 原生 SDK/摄取；基础设施角色并没有被整体推翻。", "en": "V4 converges on observation-first semantics, unified events, and OTel-native SDK/ingestion; it does not replace the whole infrastructure."}}],
+        "open": [{"zh": "为什么说 v4 是数据模型迁移，而不只是 API 改名？", "en": "Why is v4 a data-model migration rather than just an API rename?"}],
+    },
+    "57-v4-unified-events.html": {
+        "mcq": [{"q": {"zh": "为什么 <code>events_full</code> 会重复保存 user/session/tags 等 trace 维度？", "en": "Why does <code>events_full</code> repeat trace dimensions such as user/session/tags?"},
+                 "opts": [
+                    {"zh": "为了减少热点分析查询中的 JOIN", "en": "To reduce joins on hot analytical reads"},
+                    {"zh": "因为 ClickHouse 不支持 JOIN", "en": "Because ClickHouse cannot perform joins"},
+                    {"zh": "为了让 PostgreSQL 更小", "en": "To make PostgreSQL smaller"}],
+                 "answer": 0,
+                 "why": {"zh": "这是面向分析的反范式化：多存一些字节，换取列裁剪、过滤、聚合和全文检索更直接。", "en": "This is analytics-oriented denormalization: spend storage bytes to simplify filtering, aggregation, pruning and search."}}],
+        "open": [{"zh": "如果一条 observation 的 input/output 很大，为什么列表查询不应该总扫 <code>events_full</code> 的全部列？", "en": "Why should list queries avoid scanning every <code>events_full</code> column when I/O is large?"}],
+    },
+    "58-python-sdk-v4-otel.html": {
+        "mcq": [{"q": {"zh": "Python SDK v4 中父子 observation 关系主要由什么决定？", "en": "What primarily determines parent-child observation relationships in Python SDK v4?"},
+                 "opts": [
+                    {"zh": "当前 OTel span/context", "en": "The current OTel span/context"},
+                    {"zh": "一个手工维护的全局 trace_id 列表", "en": "A manually maintained global trace-id list"},
+                    {"zh": "PostgreSQL 外键", "en": "PostgreSQL foreign keys"}],
+                 "answer": 0,
+                 "why": {"zh": "v4 SDK 基于 OpenTelemetry context 建树；<code>@observe</code> 和 <code>start_as_current_observation</code> 都利用当前上下文。", "en": "The v4 SDK builds the tree from OpenTelemetry context; both <code>@observe</code> and <code>start_as_current_observation</code> use current context."}}],
+        "open": [{"zh": "为什么短生命周期脚本通常要显式 <code>flush()</code>？", "en": "Why should short-lived scripts commonly call <code>flush()</code> explicitly?"}],
+    },
+    "59-agent-langchain-v4.html": {
+        "mcq": [{"q": {"zh": "复杂 LangGraph Agent 只挂一个 Langfuse CallbackHandler 后，哪件事仍可能需要手工埋点？", "en": "After adding one Langfuse CallbackHandler to a complex LangGraph agent, what can still require manual instrumentation?"},
+                 "opts": [
+                    {"zh": "LangChain 已经发出的标准 model callback", "en": "Standard model callbacks already emitted by LangChain"},
+                    {"zh": "业务层 supervisor 路由与自研 HTTP/DB 工具边界", "en": "Business supervisor routing and custom HTTP/DB tool boundaries"},
+                    {"zh": "Python 函数返回语句本身", "en": "The Python return statement itself"}],
+                 "answer": 1,
+                 "why": {"zh": "Callback 覆盖框架事件，但不会自动理解所有业务边界和自研 I/O；这些地方需要选择性手工 observation。", "en": "Callbacks cover framework events but cannot understand every business boundary or custom I/O, so selected manual observations are still needed."}}],
+        "open": [{"zh": "你的 Agent State 里哪些字段值得进 trace，哪些不应该每步完整复制？为什么？", "en": "Which Agent State fields belong in traces, and which should not be copied on every step? Why?"}],
+    },
+    "60-v4-evals-real-time.html": {
+        "mcq": [{"q": {"zh": "线上 evaluator 与离线 experiment 最合理的关系是什么？", "en": "What is the most useful relationship between online evaluators and offline experiments?"},
+                 "opts": [
+                    {"zh": "二者完全独立", "en": "They should be completely independent"},
+                    {"zh": "线上找 bad case，固化进 dataset，再用 experiment 回归验证修复", "en": "Mine bad cases online, promote them to a dataset, then regression-test fixes in experiments"},
+                    {"zh": "只保留平均 score dashboard 即可", "en": "Keep only an average-score dashboard"}],
+                 "answer": 1,
+                 "why": {"zh": "生产 observation → score → bad case → dataset → experiment 才形成持续改进闭环。", "en": "Production observation → score → bad case → dataset → experiment forms a continuous improvement loop."}}],
+        "open": [{"zh": "整次 Agent 任务的 score 和某个 generation/tool 的局部 score 应分别挂在哪里？", "en": "Where should whole-task scores and local generation/tool scores be attached?"}],
+    },
+    "61-v4-self-hosted-migration.html": {
+        "mcq": [{"q": {"zh": "为什么自托管 v3→v4 不应该直接一步切到 <code>events_only</code>？", "en": "Why should a self-hosted v3→v4 migration not jump directly to <code>events_only</code>?"},
+                 "opts": [
+                    {"zh": "因为需要先验证 dual write、历史回填、producer/reader 与恢复路径", "en": "Because dual writes, backfill, producers/readers and recovery must be validated first"},
+                    {"zh": "因为 v4 不支持 ClickHouse", "en": "Because v4 does not support ClickHouse"},
+                    {"zh": "因为 worker 必须永久停机", "en": "Because the worker must remain stopped"}],
+                 "answer": 0,
+                 "why": {"zh": "v4 涉及 ClickHouse 数据模型迁移；分阶段切换可以验证覆盖率、实时读取、成本和回滚准备。", "en": "V4 changes the ClickHouse data model; staged cutover lets you validate coverage, reads, cost and recovery readiness."}}],
+        "open": [{"zh": "如果你负责一次生产升级，上线前会用哪一条真实请求验证 trace→query→score→cost 全链路？", "en": "Which real request would you use to validate trace→query→score→cost before production cutover?"}],
+    },
+
 }
 
 
